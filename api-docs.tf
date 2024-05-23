@@ -7,7 +7,7 @@ resource "aws_lambda_function" "api_docs_handler" {
   source_code_hash = data.archive_file.api_docs_handler.output_base64sha256
   handler          = "main.lambda_handler"
   layers           = [aws_lambda_layer_version.api_docs_requirements.arn]
-  runtime          = "python3.11"
+  runtime          = "python3.12"
 }
 
 data "archive_file" "api_docs_handler" {
@@ -21,7 +21,7 @@ resource "aws_lambda_layer_version" "api_docs_requirements" {
 
   filename            = "${path.module}/dist/api-docs-requirements.zip"
   source_code_hash    = filebase64sha256("${path.module}/dist/api-docs-requirements.zip")
-  compatible_runtimes = ["python3.11"]
+  compatible_runtimes = ["python3.12"]
 }
 
 resource "aws_iam_role" "api_docs_handler" {

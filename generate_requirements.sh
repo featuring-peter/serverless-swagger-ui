@@ -13,12 +13,12 @@ mkdir -p ${OUTPUT_DIRECTORY}
 
 LAYER_NAME=api-docs-requirements
 
-virtualenv --clear --python=python3.11 "${CURRENT_DIRECTORY}/venv-${LAYER_NAME}";
+virtualenv --clear --python=python3.12 "${CURRENT_DIRECTORY}/venv-${LAYER_NAME}";
 . "${CURRENT_DIRECTORY}/venv-${LAYER_NAME}/bin/activate" && python -m pip install -r "${CURRENT_DIRECTORY}/src/api-docs/requirements.txt"
 deactivate
 
 mkdir -p "/tmp/python"
-cd "venv-${LAYER_NAME}/lib/python3.11/site-packages"
+cd "venv-${LAYER_NAME}/lib/python3.12/site-packages"
 cp -r . "/tmp/python/"
 
 cd "/tmp"

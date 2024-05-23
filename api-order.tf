@@ -5,7 +5,7 @@ resource "aws_lambda_function" "orders_handler" {
   filename         = data.archive_file.orders_handler.output_path
   source_code_hash = data.archive_file.orders_handler.output_base64sha256
   handler          = "orders.handler"
-  runtime          = "python3.11"
+  runtime          = "python3.12"
 }
 
 data "archive_file" "orders_handler" {

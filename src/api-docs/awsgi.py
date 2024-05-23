@@ -8,49 +8,36 @@ import itertools
 import sys
 from base64 import b64decode, b64encode
 from io import BytesIO
+from urllib.parse import urlencode
 
-try:
-    # Python 3
-    from urllib.parse import urlencode
 
-    # Convert bytes to str, if required
-    def convert_str(s):
-        return s.decode('utf-8') if isinstance(s, bytes) else s
+# Convert bytes to str, if required
+def convert_str(s):
+    return s.decode("utf-8") if isinstance(s, bytes) else s
 
-    # Convert str to bytes, if required
-    def convert_byte(b):
-        return b.encode('utf-8', errors='strict') if (
-            isinstance(b, str)) else b
-except ImportError:
-    # Python 2
-    from urllib import urlencode
 
-    # No conversion required
-    def convert_str(s):
-        return s
+# Convert str to bytes, if required
+def convert_byte(b):
+    return b.encode("utf-8", errors="strict") if (isinstance(b, str)) else b
 
-    # Convert str to bytes, if required
-    def convert_byte(b):
-        return b.encode('utf-8', errors='strict') if (
-            isinstance(b, (str, unicode))) else b
 
-__all__ = 'response',
+__all__ = ("response",)
 
 
 def convert_b46(s):
-    return b64encode(s).decode('ascii')
+    return b64encode(s).decode("ascii")
 
 
 class StartResponse(object):
     def __init__(self, base64_content_types=None):
-        '''
+        """
         Args:
             base64_content_types (set): Set of HTTP Content-Types which should
             return a base64 encoded body. Enables returning binary content from
             API Gateway.
-        '''
+        """
         self.status = 500
-        self.status_line = '500 Internal Server Error'
+        self.status_line = "500 Internal Server Error"
         self.headers = []
         self.chunks = collections.deque()
         self.base64_content_types = set(base64_content_types or []) or set()
@@ -62,16 +49,19 @@ class StartResponse(object):
         return self.chunks.append
 
     def use_binary_response(self, headers, body):
-        content_type = headers.get('Content-Type')
+        content_type = headers.get("Content-Type")
 
-        if content_type and ';' in content_type:
-            content_type = content_type.split(';')[0]
+        if content_type and ";" in content_type:
+            content_type = content_type.split(";")[0]
         return content_type in self.base64_content_types
 
     def build_body(self, headers, output):
-        totalbody = b''.join(itertools.chain(
-            self.chunks, output,
-        ))
+        totalbody = b"".join(
+            itertools.chain(
+                self.chunks,
+                output,
+            )
+        )
 
         is_b64 = self.use_binary_response(headers, totalbody)
 
@@ -81,16 +71,16 @@ class StartResponse(object):
             converted_output = convert_str(totalbody)
 
         return {
-            'isBase64Encoded': is_b64,
-            'body': converted_output,
+            "isBase64Encoded": is_b64,
+            "body": converted_output,
         }
 
     def response(self, output):
         headers = dict(self.headers)
 
         rv = {
-            'statusCode': self.status,
-            'headers': headers,
+            "statusCode": self.status,
+            "headers": headers,
         }
         rv.update(self.build_body(headers, output))
         return rv
@@ -100,7 +90,7 @@ class StartResponse_GW(StartResponse):
     def response(self, output):
         rv = super(StartResponse_GW, self).response(output)
 
-        rv['statusCode'] = str(rv['statusCode'])
+        rv["statusCode"] = str(rv["statusCode"])
 
         return rv
 
@@ -109,63 +99,63 @@ class StartResponse_ELB(StartResponse):
     def response(self, output):
         rv = super(StartResponse_ELB, self).response(output)
 
-        rv['statusCode'] = int(rv['statusCode'])
-        rv['statusDescription'] = self.status_line
+        rv["statusCode"] = int(rv["statusCode"])
+        rv["statusDescription"] = self.status_line
 
         return rv
 
 
 def environ(event, context):
-    body = event.get('body', '') or ''
+    body = event.get("body", "") or ""
 
-    if event.get('isBase64Encoded', False):
+    if event.get("isBase64Encoded", False):
         body = b64decode(body)
     # FIXME: Flag the encoding in the headers
     body = convert_byte(body)
 
     environ = {
-        'REQUEST_METHOD': event['httpMethod'],
-        'SCRIPT_NAME': '',
-        'SERVER_NAME': '',
-        'SERVER_PORT': '',
-        'PATH_INFO': event['path'],
-        'QUERY_STRING': urlencode(event['queryStringParameters'] or {}),
-        'REMOTE_ADDR': '127.0.0.1',
-        'CONTENT_LENGTH': str(len(body)),
-        'HTTP': 'on',
-        'SERVER_PROTOCOL': 'HTTP/1.1',
-        'wsgi.version': (1, 0),
-        'wsgi.input': BytesIO(body),
-        'wsgi.errors': sys.stderr,
-        'wsgi.multithread': False,
-        'wsgi.multiprocess': False,
-        'wsgi.run_once': False,
-        'wsgi.url_scheme': '',
-        'awsgi.event': event,
-        'awsgi.context': context,
+        "REQUEST_METHOD": event["httpMethod"],
+        "SCRIPT_NAME": "",
+        "SERVER_NAME": "",
+        "SERVER_PORT": "",
+        "PATH_INFO": event["path"],
+        "QUERY_STRING": urlencode(event["queryStringParameters"] or {}),
+        "REMOTE_ADDR": "127.0.0.1",
+        "CONTENT_LENGTH": str(len(body)),
+        "HTTP": "on",
+        "SERVER_PROTOCOL": "HTTP/1.1",
+        "wsgi.version": (1, 0),
+        "wsgi.input": BytesIO(body),
+        "wsgi.errors": sys.stderr,
+        "wsgi.multithread": False,
+        "wsgi.multiprocess": False,
+        "wsgi.run_once": False,
+        "wsgi.url_scheme": "",
+        "awsgi.event": event,
+        "awsgi.context": context,
     }
-    headers = event.get('headers', {}) or {}
+    headers = event.get("headers", {}) or {}
     for k, v in headers.items():
-        k = k.upper().replace('-', '_')
+        k = k.upper().replace("-", "_")
 
-        if k == 'CONTENT_TYPE':
-            environ['CONTENT_TYPE'] = v
-        elif k == 'HOST':
-            environ['SERVER_NAME'] = v
-        elif k == 'X_FORWARDED_FOR':
-            environ['REMOTE_ADDR'] = v.split(', ')[0]
-        elif k == 'X_FORWARDED_PROTO':
-            environ['wsgi.url_scheme'] = v
-        elif k == 'X_FORWARDED_PORT':
-            environ['SERVER_PORT'] = v
+        if k == "CONTENT_TYPE":
+            environ["CONTENT_TYPE"] = v
+        elif k == "HOST":
+            environ["SERVER_NAME"] = v
+        elif k == "X_FORWARDED_FOR":
+            environ["REMOTE_ADDR"] = v.split(", ")[0]
+        elif k == "X_FORWARDED_PROTO":
+            environ["wsgi.url_scheme"] = v
+        elif k == "X_FORWARDED_PORT":
+            environ["SERVER_PORT"] = v
 
-        environ['HTTP_' + k] = v
+        environ["HTTP_" + k] = v
 
     return environ
 
 
 def select_impl(event, context):
-    if 'elb' in event.get('requestContext', {}):
+    if "elb" in event.get("requestContext", {}):
         return environ, StartResponse_ELB
     else:
         return environ, StartResponse_GW
